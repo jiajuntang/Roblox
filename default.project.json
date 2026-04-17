@@ -1,0 +1,9 @@
+{
+  "name": "Roblox",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$path": "src/ServerScriptService"
+    }
+  }
+}

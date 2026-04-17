@@ -1,0 +1,21 @@
+# Roblox place files (binary + XML). Keep source of truth in src/ via Rojo.
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Rojo build output
+build/
+*.rbxm
+*.rbxmx
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Claude Code local state
+.claude/
