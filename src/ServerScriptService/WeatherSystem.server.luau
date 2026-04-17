@@ -216,17 +216,17 @@ local function spawnPenguin(pos, role)
     -- Body (black rectangle, acts as HumanoidRootPart)
     local body = Instance.new("Part")
     body.Name = "HumanoidRootPart"
-    body.Size = Vector3.new(2.5, 3.5, 1.8)
+    body.Size = Vector3.new(3, 3.6, 2)
     body.BrickColor = BrickColor.new("Really black")
     body.Material = Enum.Material.SmoothPlastic
     body.Position = pos
     body.Anchored = false
     body.Parent = pen
 
-    -- White belly (front)
+    -- White belly panel (large, most of the front of body)
     local belly = Instance.new("Part")
     belly.Name = "Belly"
-    belly.Size = Vector3.new(2, 2.8, 0.3)
+    belly.Size = Vector3.new(2.3, 2.9, 0.25)
     belly.BrickColor = BrickColor.new("White")
     belly.Material = Enum.Material.SmoothPlastic
     belly.Anchored = false
@@ -235,13 +235,13 @@ local function spawnPenguin(pos, role)
     local bWeld = Instance.new("Weld")
     bWeld.Part0 = body
     bWeld.Part1 = belly
-    bWeld.C0 = CFrame.new(0, -0.1, 0.75)
+    bWeld.C0 = CFrame.new(0, -0.15, 0.95)
     bWeld.Parent = belly
 
-    -- Head (black square)
+    -- Head (black block)
     local head = Instance.new("Part")
     head.Name = "Head"
-    head.Size = Vector3.new(2, 2, 2)
+    head.Size = Vector3.new(2.2, 2, 2)
     head.BrickColor = BrickColor.new("Really black")
     head.Material = Enum.Material.SmoothPlastic
     head.Anchored = false
@@ -250,142 +250,132 @@ local function spawnPenguin(pos, role)
     local hWeld = Instance.new("Weld")
     hWeld.Part0 = body
     hWeld.Part1 = head
-    hWeld.C0 = CFrame.new(0, 2.5, 0)
+    hWeld.C0 = CFrame.new(0, 2.8, 0)
     hWeld.Parent = head
 
-    -- Left eye (small black)
+    -- White face mask (on front of head, where the eyes live)
+    local face = Instance.new("Part")
+    face.Name = "Face"
+    face.Size = Vector3.new(1.7, 1.5, 0.2)
+    face.BrickColor = BrickColor.new("White")
+    face.Material = Enum.Material.SmoothPlastic
+    face.Anchored = false
+    face.Parent = pen
+
+    local fWeld = Instance.new("Weld")
+    fWeld.Part0 = head
+    fWeld.Part1 = face
+    fWeld.C0 = CFrame.new(0, 0, 1.05)
+    fWeld.Parent = face
+
+    -- Left eye (small black, on white face)
     local leftEye = Instance.new("Part")
     leftEye.Name = "LeftEye"
-    leftEye.Size = Vector3.new(0.3, 0.3, 0.3)
+    leftEye.Size = Vector3.new(0.25, 0.25, 0.2)
     leftEye.BrickColor = BrickColor.new("Really black")
-    leftEye.Material = Enum.Material.Metal
+    leftEye.Material = Enum.Material.SmoothPlastic
     leftEye.Anchored = false
     leftEye.Parent = pen
 
     local leWeld = Instance.new("Weld")
     leWeld.Part0 = head
     leWeld.Part1 = leftEye
-    leWeld.C0 = CFrame.new(-0.45, 0.2, 1.05)
+    leWeld.C0 = CFrame.new(-0.4, 0.3, 1.25)
     leWeld.Parent = leftEye
 
-    -- Right eye (small black)
+    -- Right eye (small black, on white face)
     local rightEye = Instance.new("Part")
     rightEye.Name = "RightEye"
-    rightEye.Size = Vector3.new(0.3, 0.3, 0.3)
+    rightEye.Size = Vector3.new(0.25, 0.25, 0.2)
     rightEye.BrickColor = BrickColor.new("Really black")
-    rightEye.Material = Enum.Material.Metal
+    rightEye.Material = Enum.Material.SmoothPlastic
     rightEye.Anchored = false
     rightEye.Parent = pen
 
     local reWeld = Instance.new("Weld")
     reWeld.Part0 = head
     reWeld.Part1 = rightEye
-    reWeld.C0 = CFrame.new(0.45, 0.2, 1.05)
+    reWeld.C0 = CFrame.new(0.4, 0.3, 1.25)
     reWeld.Parent = rightEye
 
-    -- Beak (yellow)
+    -- Beak (yellow triangle poking forward from the face)
     local beak = Instance.new("Part")
     beak.Name = "Beak"
-    beak.Size = Vector3.new(0.7, 0.35, 0.5)
+    beak.Size = Vector3.new(0.55, 0.45, 0.8)
     beak.BrickColor = BrickColor.new("New Yeller")
     beak.Material = Enum.Material.SmoothPlastic
     beak.Anchored = false
     beak.Parent = pen
 
+    local beakMesh = Instance.new("SpecialMesh")
+    beakMesh.MeshType = Enum.MeshType.Wedge
+    beakMesh.Scale = Vector3.new(1, 1, 1)
+    beakMesh.Parent = beak
+
     local beakWeld = Instance.new("Weld")
     beakWeld.Part0 = head
     beakWeld.Part1 = beak
-    beakWeld.C0 = CFrame.new(0, -0.3, 1.2)
+    beakWeld.C0 = CFrame.new(0, -0.2, 1.35) * CFrame.Angles(math.rad(180), 0, 0)
     beakWeld.Parent = beak
 
-    -- Left arm (short black)
-    local leftArm = Instance.new("Part")
-    leftArm.Name = "LeftArm"
-    leftArm.Size = Vector3.new(0.4, 1.5, 0.8)
-    leftArm.BrickColor = BrickColor.new("Really black")
-    leftArm.Material = Enum.Material.SmoothPlastic
-    leftArm.Anchored = false
-    leftArm.Parent = pen
+    -- Left flipper (long black, hangs down the full side of the body)
+    local leftFlipper = Instance.new("Part")
+    leftFlipper.Name = "LeftFlipper"
+    leftFlipper.Size = Vector3.new(0.45, 3.2, 1.1)
+    leftFlipper.BrickColor = BrickColor.new("Really black")
+    leftFlipper.Material = Enum.Material.SmoothPlastic
+    leftFlipper.Anchored = false
+    leftFlipper.Parent = pen
 
-    local laWeld = Instance.new("Weld")
-    laWeld.Part0 = body
-    laWeld.Part1 = leftArm
-    laWeld.C0 = CFrame.new(-1.45, 0.3, 0)
-    laWeld.Parent = leftArm
+    local lfpWeld = Instance.new("Weld")
+    lfpWeld.Part0 = body
+    lfpWeld.Part1 = leftFlipper
+    lfpWeld.C0 = CFrame.new(-1.7, -0.1, 0)
+    lfpWeld.Parent = leftFlipper
 
-    -- Right arm (short black)
-    local rightArm = Instance.new("Part")
-    rightArm.Name = "RightArm"
-    rightArm.Size = Vector3.new(0.4, 1.5, 0.8)
-    rightArm.BrickColor = BrickColor.new("Really black")
-    rightArm.Material = Enum.Material.SmoothPlastic
-    rightArm.Anchored = false
-    rightArm.Parent = pen
+    -- Right flipper
+    local rightFlipper = Instance.new("Part")
+    rightFlipper.Name = "RightFlipper"
+    rightFlipper.Size = Vector3.new(0.45, 3.2, 1.1)
+    rightFlipper.BrickColor = BrickColor.new("Really black")
+    rightFlipper.Material = Enum.Material.SmoothPlastic
+    rightFlipper.Anchored = false
+    rightFlipper.Parent = pen
 
-    local raWeld = Instance.new("Weld")
-    raWeld.Part0 = body
-    raWeld.Part1 = rightArm
-    raWeld.C0 = CFrame.new(1.45, 0.3, 0)
-    raWeld.Parent = rightArm
+    local rfpWeld = Instance.new("Weld")
+    rfpWeld.Part0 = body
+    rfpWeld.Part1 = rightFlipper
+    rfpWeld.C0 = CFrame.new(1.7, -0.1, 0)
+    rfpWeld.Parent = rightFlipper
 
-    -- Left leg (short black)
-    local leftLeg = Instance.new("Part")
-    leftLeg.Name = "LeftLeg"
-    leftLeg.Size = Vector3.new(0.5, 1, 0.8)
-    leftLeg.BrickColor = BrickColor.new("Really black")
-    leftLeg.Material = Enum.Material.SmoothPlastic
-    leftLeg.Anchored = false
-    leftLeg.Parent = pen
-
-    local llWeld = Instance.new("Weld")
-    llWeld.Part0 = body
-    llWeld.Part1 = leftLeg
-    llWeld.C0 = CFrame.new(-0.55, -2.25, 0)
-    llWeld.Parent = leftLeg
-
-    -- Right leg (short black)
-    local rightLeg = Instance.new("Part")
-    rightLeg.Name = "RightLeg"
-    rightLeg.Size = Vector3.new(0.5, 1, 0.8)
-    rightLeg.BrickColor = BrickColor.new("Really black")
-    rightLeg.Material = Enum.Material.SmoothPlastic
-    rightLeg.Anchored = false
-    rightLeg.Parent = pen
-
-    local rlWeld = Instance.new("Weld")
-    rlWeld.Part0 = body
-    rlWeld.Part1 = rightLeg
-    rlWeld.C0 = CFrame.new(0.55, -2.25, 0)
-    rlWeld.Parent = rightLeg
-
-    -- Left foot (yellow)
+    -- Left foot (yellow slab, attached directly to body bottom, sticking forward)
     local leftFoot = Instance.new("Part")
     leftFoot.Name = "LeftFoot"
-    leftFoot.Size = Vector3.new(0.7, 0.3, 1.1)
+    leftFoot.Size = Vector3.new(0.9, 0.35, 1.6)
     leftFoot.BrickColor = BrickColor.new("New Yeller")
     leftFoot.Material = Enum.Material.SmoothPlastic
     leftFoot.Anchored = false
     leftFoot.Parent = pen
 
     local lfWeld = Instance.new("Weld")
-    lfWeld.Part0 = leftLeg
+    lfWeld.Part0 = body
     lfWeld.Part1 = leftFoot
-    lfWeld.C0 = CFrame.new(0, -0.65, 0.2)
+    lfWeld.C0 = CFrame.new(-0.6, -1.95, 0.4)
     lfWeld.Parent = leftFoot
 
-    -- Right foot (yellow)
+    -- Right foot
     local rightFoot = Instance.new("Part")
     rightFoot.Name = "RightFoot"
-    rightFoot.Size = Vector3.new(0.7, 0.3, 1.1)
+    rightFoot.Size = Vector3.new(0.9, 0.35, 1.6)
     rightFoot.BrickColor = BrickColor.new("New Yeller")
     rightFoot.Material = Enum.Material.SmoothPlastic
     rightFoot.Anchored = false
     rightFoot.Parent = pen
 
     local rfWeld = Instance.new("Weld")
-    rfWeld.Part0 = rightLeg
+    rfWeld.Part0 = body
     rfWeld.Part1 = rightFoot
-    rfWeld.C0 = CFrame.new(0, -0.65, 0.2)
+    rfWeld.C0 = CFrame.new(0.6, -1.95, 0.4)
     rfWeld.Parent = rightFoot
 
     -- Humanoid
@@ -465,10 +455,10 @@ local function spawnPenguin(pos, role)
         -- Every 10s: restore previously hidden limb, hide a new random one
         task.spawn(function()
             local limbs = {
-                {leftArm},
-                {rightArm},
-                {leftLeg, leftFoot},
-                {rightLeg, rightFoot},
+                {leftFlipper},
+                {rightFlipper},
+                {leftFoot},
+                {rightFoot},
             }
             local currentHidden = nil
             while pen and pen.Parent and hum.Health > 0 do
