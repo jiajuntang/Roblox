@@ -12,7 +12,18 @@ local WEATHER_DURATION = 120
 local DEFAULT_SPEED = 16
 local DEFAULT_JUMP = 50
 local TALK_INTERVAL = 2
+local FEED_REACH = 10
+local FISH_PER_EVENT = 3
 local penguins = {}
+local playerBonuses = {} -- [userId] = {speed = fractional, jump = fractional}
+
+local fishRewards = {
+    {weight = 40, speed = 0.01, jump = 0.02, tier = "Common"},
+    {weight = 30, speed = 0.05, jump = 0,    tier = "Uncommon"},
+    {weight = 20, speed = 0.03, jump = 0.04, tier = "Rare"},
+    {weight = 7,  speed = 0,    jump = 0.10, tier = "Epic"},
+    {weight = 3,  speed = 0.05, jump = 0.15, tier = "Legendary"},
+}
 
 local penguinSayings = {
     "My name is Guin Guin, also known as Marky Penguin!",
@@ -75,18 +86,48 @@ local function announce(msg)
     end
 end
 
+local function getBonus(userId)
+    return playerBonuses[userId] or {speed = 0, jump = 0}
+end
+
 local function setAllStats(speed, jump)
     for _,p in pairs(Players:GetPlayers()) do
         local ch = p.Character
         if ch then
             local hum = ch:FindFirstChild("Humanoid")
             if hum then
-                hum.WalkSpeed = speed
-                hum.JumpPower = jump
+                local bonus = getBonus(p.UserId)
+                hum.WalkSpeed = speed + DEFAULT_SPEED * bonus.speed
+                hum.JumpPower = jump + DEFAULT_JUMP * bonus.jump
             end
         end
     end
 end
+
+local function applyBonusesOnSpawn(player, ch)
+    task.wait(1.2)
+    if not ch or not ch.Parent then return end
+    local hum = ch:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local bonus = getBonus(player.UserId)
+    hum.WalkSpeed = DEFAULT_SPEED + DEFAULT_SPEED * bonus.speed
+    hum.JumpPower = DEFAULT_JUMP + DEFAULT_JUMP * bonus.jump
+end
+
+Players.PlayerAdded:Connect(function(p)
+    playerBonuses[p.UserId] = playerBonuses[p.UserId] or {speed = 0, jump = 0}
+    p.CharacterAdded:Connect(function(ch)
+        applyBonusesOnSpawn(p, ch)
+    end)
+end)
+
+for _,p in pairs(Players:GetPlayers()) do
+    playerBonuses[p.UserId] = playerBonuses[p.UserId] or {speed = 0, jump = 0}
+end
+
+Players.PlayerRemoving:Connect(function(p)
+    playerBonuses[p.UserId] = nil
+end)
 
 local function clearPenguins()
     for _,pen in pairs(penguins) do
@@ -280,44 +321,6 @@ local function spawnPenguin(pos, role)
     tWeld.Part1 = throat
     tWeld.C0 = CFrame.new(0, -0.6, 0.45)
     tWeld.Parent = throat
-
-    -- Left ear patch (Emperor-penguin orange/yellow blush on side of head)
-    local leftEar = Instance.new("Part")
-    leftEar.Name = "LeftEarPatch"
-    leftEar.Size = Vector3.new(0.35, 1, 1.1)
-    leftEar.BrickColor = BrickColor.new("Deep orange")
-    leftEar.Material = Enum.Material.SmoothPlastic
-    leftEar.Anchored = false
-    leftEar.Parent = pen
-    local leMesh = Instance.new("SpecialMesh")
-    leMesh.MeshType = Enum.MeshType.Sphere
-    leMesh.Scale = Vector3.new(1, 1, 1)
-    leMesh.Parent = leftEar
-
-    local leaWeld = Instance.new("Weld")
-    leaWeld.Part0 = head
-    leaWeld.Part1 = leftEar
-    leaWeld.C0 = CFrame.new(-0.95, -0.15, 0.35)
-    leaWeld.Parent = leftEar
-
-    -- Right ear patch
-    local rightEar = Instance.new("Part")
-    rightEar.Name = "RightEarPatch"
-    rightEar.Size = Vector3.new(0.35, 1, 1.1)
-    rightEar.BrickColor = BrickColor.new("Deep orange")
-    rightEar.Material = Enum.Material.SmoothPlastic
-    rightEar.Anchored = false
-    rightEar.Parent = pen
-    local reMesh = Instance.new("SpecialMesh")
-    reMesh.MeshType = Enum.MeshType.Sphere
-    reMesh.Scale = Vector3.new(1, 1, 1)
-    reMesh.Parent = rightEar
-
-    local reaWeld = Instance.new("Weld")
-    reaWeld.Part0 = head
-    reaWeld.Part1 = rightEar
-    reaWeld.C0 = CFrame.new(0.95, -0.15, 0.35)
-    reaWeld.Parent = rightEar
 
     -- Left eye (white sclera)
     local leftEye = Instance.new("Part")
@@ -606,6 +609,128 @@ task.spawn(function()
     end
 end)
 
+local function rollFishReward()
+    local total = 0
+    for _,r in pairs(fishRewards) do total = total + r.weight end
+    local roll = math.random(1, total)
+    local acc = 0
+    for _,r in pairs(fishRewards) do
+        acc = acc + r.weight
+        if roll <= acc then return r end
+    end
+    return fishRewards[1]
+end
+
+local function feedPenguin(pen, player)
+    local head = pen:FindFirstChild("Head")
+    if head then
+        local bill = Instance.new("BillboardGui")
+        bill.Size = UDim2.new(0, 160, 0, 45)
+        bill.StudsOffset = Vector3.new(0, 3, 0)
+        bill.Adornee = head
+        bill.Parent = head
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        label.BackgroundTransparency = 0.25
+        label.Text = "YUM!"
+        label.TextColor3 = Color3.fromRGB(0, 0, 0)
+        label.TextSize = 18
+        label.Font = Enum.Font.GothamBold
+        label.Parent = bill
+        Instance.new("UICorner", label).CornerRadius = UDim.new(0, 8)
+        task.delay(2, function()
+            if bill and bill.Parent then bill:Destroy() end
+        end)
+    end
+
+    local reward = rollFishReward()
+    local userId = player.UserId
+    playerBonuses[userId] = playerBonuses[userId] or {speed = 0, jump = 0}
+    playerBonuses[userId].speed = playerBonuses[userId].speed + reward.speed
+    playerBonuses[userId].jump = playerBonuses[userId].jump + reward.jump
+
+    local ch = player.Character
+    if ch then
+        local hum = ch:FindFirstChild("Humanoid")
+        if hum then
+            hum.WalkSpeed = hum.WalkSpeed + DEFAULT_SPEED * reward.speed
+            hum.JumpPower = hum.JumpPower + DEFAULT_JUMP * reward.jump
+        end
+    end
+
+    local pg = player:FindFirstChild("PlayerGui")
+    if pg then
+        local msg = reward.tier .. "!"
+        if reward.speed > 0 then
+            msg = msg .. " +" .. math.floor(reward.speed * 100 + 0.5) .. "% speed"
+        end
+        if reward.jump > 0 then
+            msg = msg .. " +" .. math.floor(reward.jump * 100 + 0.5) .. "% jump"
+        end
+        local hint = Instance.new("Hint")
+        hint.Text = msg
+        hint.Parent = pg
+        task.delay(4, function()
+            if hint and hint.Parent then hint:Destroy() end
+        end)
+    end
+end
+
+local function giveFish(player)
+    local bp = player:FindFirstChild("Backpack")
+    if not bp then return end
+
+    local tool = Instance.new("Tool")
+    tool.Name = "Fish"
+    tool.RequiresHandle = true
+    tool.CanBeDropped = false
+    tool.ToolTip = "Feed to a penguin (within " .. FEED_REACH .. " studs)"
+
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(0.9, 0.6, 2.2)
+    handle.BrickColor = BrickColor.new("Cyan")
+    handle.Material = Enum.Material.SmoothPlastic
+    handle.Massless = true
+    handle.Parent = tool
+    local fishMesh = Instance.new("SpecialMesh")
+    fishMesh.MeshType = Enum.MeshType.Sphere
+    fishMesh.Scale = Vector3.new(1, 1, 1)
+    fishMesh.Parent = handle
+
+    tool.Activated:Connect(function()
+        local ch = tool.Parent
+        if not ch then return end
+        local plr = Players:GetPlayerFromCharacter(ch)
+        if not plr then return end
+        local root = ch:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local closest = nil
+        local closestDist = FEED_REACH
+        for _,pen in pairs(penguins) do
+            if pen and pen.Parent then
+                local pRoot = pen:FindFirstChild("HumanoidRootPart")
+                if pRoot then
+                    local d = (pRoot.Position - root.Position).Magnitude
+                    if d < closestDist then
+                        closestDist = d
+                        closest = pen
+                    end
+                end
+            end
+        end
+
+        if closest then
+            feedPenguin(closest, plr)
+            tool:Destroy()
+        end
+    end)
+
+    tool.Parent = bp
+end
+
 local function penguinEvent()
     announce("PENGUIN EVENT! Penguins are everywhere!")
     Lighting.Brightness = 1.8
@@ -633,6 +758,9 @@ local function penguinEvent()
                     spawnPenguin(root.Position + offset, roles[i])
                 end
             end
+        end
+        for i = 1, FISH_PER_EVENT do
+            giveFish(p)
         end
     end
 end
