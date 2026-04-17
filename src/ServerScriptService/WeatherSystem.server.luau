@@ -11,6 +11,7 @@ local WEATHER_INTERVAL = 60
 local WEATHER_DURATION = 120
 local DEFAULT_SPEED = 16
 local DEFAULT_JUMP = 50
+local TALK_INTERVAL = 2
 local penguins = {}
 
 local penguinSayings = {
@@ -35,6 +36,30 @@ local penguinSayings = {
     "HIIIIIIIIIIIIIIIIIIII",
     "Wait a minute, Who are you?????",
 }
+
+local jealousSayings = {
+    {weight = 20, text = "did you see that so perfect right?"},
+    {weight = 40, text = "i took 10 years to learn this"},
+    {weight = 30, text = "i totally got this"},
+    {weight = 10, text = "its so perfect"},
+}
+
+local glitchySayings = {
+    {weight = 50, text = "i am tottally okay"},
+    {weight = 50, text = "say i not malfunctioning"},
+}
+
+local function weightedPick(choices)
+    local total = 0
+    for _,c in pairs(choices) do total = total + c.weight end
+    local roll = math.random(1, total)
+    local acc = 0
+    for _,c in pairs(choices) do
+        acc = acc + c.weight
+        if roll <= acc then return c.text end
+    end
+    return choices[1].text
+end
 
 local function announce(msg)
     for _,p in pairs(Players:GetPlayers()) do
@@ -126,13 +151,22 @@ local function sandStorm()
     setAllStats(DEFAULT_SPEED, DEFAULT_JUMP)
 end
 
-local function penguinTalk(pen)
+local function penguinTalk(pen, role)
     local head = pen:FindFirstChild("Head")
     if not head then
         head = pen:FindFirstChild("HumanoidRootPart")
     end
     if not head then return end
-    local msg = penguinSayings[math.random(1, #penguinSayings)]
+
+    local msg
+    if role == "jealous" then
+        msg = weightedPick(jealousSayings)
+    elseif role == "glitchy" then
+        msg = weightedPick(glitchySayings)
+    else
+        msg = penguinSayings[math.random(1, #penguinSayings)]
+    end
+
     local bill = Instance.new("BillboardGui")
     bill.Size = UDim2.new(0, 200, 0, 50)
     bill.StudsOffset = Vector3.new(0, 3, 0)
@@ -173,49 +207,40 @@ local function findNearestPlayer(pos)
     return best, bestDist
 end
 
-local function spawnPenguin(pos)
+local function spawnPenguin(pos, role)
+    role = role or "normal"
     local pen = Instance.new("Model")
     pen.Name = "Penguin"
+    pen:SetAttribute("Role", role)
 
-    -- Body (oval shaped)
+    -- Body (black rectangle, acts as HumanoidRootPart)
     local body = Instance.new("Part")
     body.Name = "HumanoidRootPart"
-    body.Size = Vector3.new(2.5, 3.5, 2)
+    body.Size = Vector3.new(2.5, 3.5, 1.8)
     body.BrickColor = BrickColor.new("Really black")
     body.Material = Enum.Material.SmoothPlastic
     body.Position = pos
     body.Anchored = false
-    body.Shape = Enum.PartType.Block
     body.Parent = pen
-
-    local bodyMesh = Instance.new("SpecialMesh")
-    bodyMesh.MeshType = Enum.MeshType.Sphere
-    bodyMesh.Scale = Vector3.new(0.8, 1, 0.7)
-    bodyMesh.Parent = body
 
     -- White belly (front)
     local belly = Instance.new("Part")
-    belly.Size = Vector3.new(1.8, 2.5, 0.5)
+    belly.Name = "Belly"
+    belly.Size = Vector3.new(2, 2.8, 0.3)
     belly.BrickColor = BrickColor.new("White")
     belly.Material = Enum.Material.SmoothPlastic
     belly.Anchored = false
     belly.Parent = pen
 
-    local bellyMesh = Instance.new("SpecialMesh")
-    bellyMesh.MeshType = Enum.MeshType.Sphere
-    bellyMesh.Scale = Vector3.new(0.8, 0.9, 0.5)
-    bellyMesh.Parent = belly
-
     local bWeld = Instance.new("Weld")
     bWeld.Part0 = body
     bWeld.Part1 = belly
-    bWeld.C0 = CFrame.new(0, -0.2, 0.6)
+    bWeld.C0 = CFrame.new(0, -0.1, 0.75)
     bWeld.Parent = belly
 
-    -- Head (round)
+    -- Head (black square)
     local head = Instance.new("Part")
     head.Name = "Head"
-    head.Shape = Enum.PartType.Ball
     head.Size = Vector3.new(2, 2, 2)
     head.BrickColor = BrickColor.new("Really black")
     head.Material = Enum.Material.SmoothPlastic
@@ -225,167 +250,142 @@ local function spawnPenguin(pos)
     local hWeld = Instance.new("Weld")
     hWeld.Part0 = body
     hWeld.Part1 = head
-    hWeld.C0 = CFrame.new(0, 2.2, 0)
+    hWeld.C0 = CFrame.new(0, 2.5, 0)
     hWeld.Parent = head
 
-    -- White face patch
-    local face = Instance.new("Part")
-    face.Shape = Enum.PartType.Ball
-    face.Size = Vector3.new(1.2, 1.2, 0.5)
-    face.BrickColor = BrickColor.new("White")
-    face.Material = Enum.Material.SmoothPlastic
-    face.Anchored = false
-    face.Parent = pen
-
-    local fWeld = Instance.new("Weld")
-    fWeld.Part0 = head
-    fWeld.Part1 = face
-    fWeld.C0 = CFrame.new(0, -0.2, 0.6)
-    fWeld.Parent = face
-
-    -- Left eye
+    -- Left eye (small black)
     local leftEye = Instance.new("Part")
-    leftEye.Shape = Enum.PartType.Ball
+    leftEye.Name = "LeftEye"
     leftEye.Size = Vector3.new(0.3, 0.3, 0.3)
     leftEye.BrickColor = BrickColor.new("Really black")
-    leftEye.Material = Enum.Material.SmoothPlastic
+    leftEye.Material = Enum.Material.Metal
     leftEye.Anchored = false
     leftEye.Parent = pen
 
     local leWeld = Instance.new("Weld")
     leWeld.Part0 = head
     leWeld.Part1 = leftEye
-    leWeld.C0 = CFrame.new(-0.35, 0.1, 0.85)
+    leWeld.C0 = CFrame.new(-0.45, 0.2, 1.05)
     leWeld.Parent = leftEye
 
-    -- Right eye
+    -- Right eye (small black)
     local rightEye = Instance.new("Part")
-    rightEye.Shape = Enum.PartType.Ball
+    rightEye.Name = "RightEye"
     rightEye.Size = Vector3.new(0.3, 0.3, 0.3)
     rightEye.BrickColor = BrickColor.new("Really black")
-    rightEye.Material = Enum.Material.SmoothPlastic
+    rightEye.Material = Enum.Material.Metal
     rightEye.Anchored = false
     rightEye.Parent = pen
 
     local reWeld = Instance.new("Weld")
     reWeld.Part0 = head
     reWeld.Part1 = rightEye
-    reWeld.C0 = CFrame.new(0.35, 0.1, 0.85)
+    reWeld.C0 = CFrame.new(0.45, 0.2, 1.05)
     reWeld.Parent = rightEye
 
-    -- Left eye white
-    local leftEyeW = Instance.new("Part")
-    leftEyeW.Shape = Enum.PartType.Ball
-    leftEyeW.Size = Vector3.new(0.15, 0.15, 0.15)
-    leftEyeW.BrickColor = BrickColor.new("White")
-    leftEyeW.Material = Enum.Material.Neon
-    leftEyeW.Anchored = false
-    leftEyeW.Parent = pen
-
-    local lewWeld = Instance.new("Weld")
-    lewWeld.Part0 = leftEye
-    lewWeld.Part1 = leftEyeW
-    lewWeld.C0 = CFrame.new(0.05, 0.05, 0.1)
-    lewWeld.Parent = leftEyeW
-
-    -- Right eye white
-    local rightEyeW = Instance.new("Part")
-    rightEyeW.Shape = Enum.PartType.Ball
-    rightEyeW.Size = Vector3.new(0.15, 0.15, 0.15)
-    rightEyeW.BrickColor = BrickColor.new("White")
-    rightEyeW.Material = Enum.Material.Neon
-    rightEyeW.Anchored = false
-    rightEyeW.Parent = pen
-
-    local rewWeld = Instance.new("Weld")
-    rewWeld.Part0 = rightEye
-    rewWeld.Part1 = rightEyeW
-    rewWeld.C0 = CFrame.new(-0.05, 0.05, 0.1)
-    rewWeld.Parent = rightEyeW
-
-    -- Beak (orange triangle)
+    -- Beak (yellow)
     local beak = Instance.new("Part")
-    beak.Size = Vector3.new(0.6, 0.3, 0.8)
-    beak.BrickColor = BrickColor.new("Deep orange")
+    beak.Name = "Beak"
+    beak.Size = Vector3.new(0.7, 0.35, 0.5)
+    beak.BrickColor = BrickColor.new("New Yeller")
     beak.Material = Enum.Material.SmoothPlastic
     beak.Anchored = false
     beak.Parent = pen
 
-    local beakMesh = Instance.new("SpecialMesh")
-    beakMesh.MeshType = Enum.MeshType.Wedge
-    beakMesh.Scale = Vector3.new(0.8, 0.5, 1)
-    beakMesh.Parent = beak
-
     local beakWeld = Instance.new("Weld")
     beakWeld.Part0 = head
     beakWeld.Part1 = beak
-    beakWeld.C0 = CFrame.new(0, -0.3, 0.9) * CFrame.Angles(math.rad(180), 0, 0)
+    beakWeld.C0 = CFrame.new(0, -0.3, 1.2)
     beakWeld.Parent = beak
 
-    -- Left wing
-    local leftWing = Instance.new("Part")
-    leftWing.Size = Vector3.new(0.5, 2.5, 1.2)
-    leftWing.BrickColor = BrickColor.new("Really black")
-    leftWing.Material = Enum.Material.SmoothPlastic
-    leftWing.Anchored = false
-    leftWing.Parent = pen
+    -- Left arm (short black)
+    local leftArm = Instance.new("Part")
+    leftArm.Name = "LeftArm"
+    leftArm.Size = Vector3.new(0.4, 1.5, 0.8)
+    leftArm.BrickColor = BrickColor.new("Really black")
+    leftArm.Material = Enum.Material.SmoothPlastic
+    leftArm.Anchored = false
+    leftArm.Parent = pen
 
-    local lwMesh = Instance.new("SpecialMesh")
-    lwMesh.MeshType = Enum.MeshType.Sphere
-    lwMesh.Scale = Vector3.new(0.4, 1, 0.6)
-    lwMesh.Parent = leftWing
+    local laWeld = Instance.new("Weld")
+    laWeld.Part0 = body
+    laWeld.Part1 = leftArm
+    laWeld.C0 = CFrame.new(-1.45, 0.3, 0)
+    laWeld.Parent = leftArm
 
-    local lwWeld = Instance.new("Weld")
-    lwWeld.Part0 = body
-    lwWeld.Part1 = leftWing
-    lwWeld.C0 = CFrame.new(-1.3, 0.2, 0) * CFrame.Angles(0, 0, math.rad(15))
-    lwWeld.Parent = leftWing
+    -- Right arm (short black)
+    local rightArm = Instance.new("Part")
+    rightArm.Name = "RightArm"
+    rightArm.Size = Vector3.new(0.4, 1.5, 0.8)
+    rightArm.BrickColor = BrickColor.new("Really black")
+    rightArm.Material = Enum.Material.SmoothPlastic
+    rightArm.Anchored = false
+    rightArm.Parent = pen
 
-    -- Right wing
-    local rightWing = Instance.new("Part")
-    rightWing.Size = Vector3.new(0.5, 2.5, 1.2)
-    rightWing.BrickColor = BrickColor.new("Really black")
-    rightWing.Material = Enum.Material.SmoothPlastic
-    rightWing.Anchored = false
-    rightWing.Parent = pen
+    local raWeld = Instance.new("Weld")
+    raWeld.Part0 = body
+    raWeld.Part1 = rightArm
+    raWeld.C0 = CFrame.new(1.45, 0.3, 0)
+    raWeld.Parent = rightArm
 
-    local rwMesh = Instance.new("SpecialMesh")
-    rwMesh.MeshType = Enum.MeshType.Sphere
-    rwMesh.Scale = Vector3.new(0.4, 1, 0.6)
-    rwMesh.Parent = rightWing
+    -- Left leg (short black)
+    local leftLeg = Instance.new("Part")
+    leftLeg.Name = "LeftLeg"
+    leftLeg.Size = Vector3.new(0.5, 1, 0.8)
+    leftLeg.BrickColor = BrickColor.new("Really black")
+    leftLeg.Material = Enum.Material.SmoothPlastic
+    leftLeg.Anchored = false
+    leftLeg.Parent = pen
 
-    local rwWeld = Instance.new("Weld")
-    rwWeld.Part0 = body
-    rwWeld.Part1 = rightWing
-    rwWeld.C0 = CFrame.new(1.3, 0.2, 0) * CFrame.Angles(0, 0, math.rad(-15))
-    rwWeld.Parent = rightWing
+    local llWeld = Instance.new("Weld")
+    llWeld.Part0 = body
+    llWeld.Part1 = leftLeg
+    llWeld.C0 = CFrame.new(-0.55, -2.25, 0)
+    llWeld.Parent = leftLeg
 
-    -- Left foot
+    -- Right leg (short black)
+    local rightLeg = Instance.new("Part")
+    rightLeg.Name = "RightLeg"
+    rightLeg.Size = Vector3.new(0.5, 1, 0.8)
+    rightLeg.BrickColor = BrickColor.new("Really black")
+    rightLeg.Material = Enum.Material.SmoothPlastic
+    rightLeg.Anchored = false
+    rightLeg.Parent = pen
+
+    local rlWeld = Instance.new("Weld")
+    rlWeld.Part0 = body
+    rlWeld.Part1 = rightLeg
+    rlWeld.C0 = CFrame.new(0.55, -2.25, 0)
+    rlWeld.Parent = rightLeg
+
+    -- Left foot (yellow)
     local leftFoot = Instance.new("Part")
-    leftFoot.Size = Vector3.new(0.8, 0.3, 1.2)
-    leftFoot.BrickColor = BrickColor.new("Deep orange")
+    leftFoot.Name = "LeftFoot"
+    leftFoot.Size = Vector3.new(0.7, 0.3, 1.1)
+    leftFoot.BrickColor = BrickColor.new("New Yeller")
     leftFoot.Material = Enum.Material.SmoothPlastic
     leftFoot.Anchored = false
     leftFoot.Parent = pen
 
     local lfWeld = Instance.new("Weld")
-    lfWeld.Part0 = body
+    lfWeld.Part0 = leftLeg
     lfWeld.Part1 = leftFoot
-    lfWeld.C0 = CFrame.new(-0.5, -1.9, 0.3)
+    lfWeld.C0 = CFrame.new(0, -0.65, 0.2)
     lfWeld.Parent = leftFoot
 
-    -- Right foot
+    -- Right foot (yellow)
     local rightFoot = Instance.new("Part")
-    rightFoot.Size = Vector3.new(0.8, 0.3, 1.2)
-    rightFoot.BrickColor = BrickColor.new("Deep orange")
+    rightFoot.Name = "RightFoot"
+    rightFoot.Size = Vector3.new(0.7, 0.3, 1.1)
+    rightFoot.BrickColor = BrickColor.new("New Yeller")
     rightFoot.Material = Enum.Material.SmoothPlastic
     rightFoot.Anchored = false
     rightFoot.Parent = pen
 
     local rfWeld = Instance.new("Weld")
-    rfWeld.Part0 = body
+    rfWeld.Part0 = rightLeg
     rfWeld.Part1 = rightFoot
-    rfWeld.C0 = CFrame.new(0.5, -1.9, 0.3)
+    rfWeld.C0 = CFrame.new(0, -0.65, 0.2)
     rfWeld.Parent = rightFoot
 
     -- Humanoid
@@ -399,42 +399,122 @@ local function spawnPenguin(pos)
     pen.PrimaryPart = body
     pen.Parent = workspace
     table.insert(penguins, pen)
+
+    -- Movement AI (skips while PlatformStand is active so stunts can play out)
     task.spawn(function()
         while pen and pen.Parent and hum.Health > 0 do
             local pRoot = pen:FindFirstChild("HumanoidRootPart")
             if not pRoot then break end
-            local nearestRoot, dist = findNearestPlayer(pRoot.Position)
-            if nearestRoot then
-                if dist > 100 then
-                    pRoot.CFrame = nearestRoot.CFrame * CFrame.new(math.random(-10, 10), 5, math.random(-10, 10))
-                elseif dist > 20 then
-                    hum:MoveTo(nearestRoot.Position)
-                    if math.random(1, 3) == 1 then
-                        hum.Jump = true
+            if hum.PlatformStand then
+                task.wait(0.5)
+            else
+                local nearestRoot, dist = findNearestPlayer(pRoot.Position)
+                if nearestRoot then
+                    if dist > 100 then
+                        pRoot.CFrame = nearestRoot.CFrame * CFrame.new(math.random(-10, 10), 5, math.random(-10, 10))
+                    elseif dist > 20 then
+                        hum:MoveTo(nearestRoot.Position)
+                        if math.random(1, 3) == 1 then
+                            hum.Jump = true
+                        end
+                    else
+                        local wanderX = math.random(-15, 15)
+                        local wanderZ = math.random(-15, 15)
+                        hum:MoveTo(nearestRoot.Position + Vector3.new(wanderX, 0, wanderZ))
+                        if math.random(1, 5) == 1 then
+                            hum.Jump = true
+                        end
                     end
                 else
-                    local wanderX = math.random(-15, 15)
-                    local wanderZ = math.random(-15, 15)
-                    hum:MoveTo(nearestRoot.Position + Vector3.new(wanderX, 0, wanderZ))
-                    if math.random(1, 5) == 1 then
-                        hum.Jump = true
+                    local wanderX = math.random(-30, 30)
+                    local wanderZ = math.random(-30, 30)
+                    hum:MoveTo(pos + Vector3.new(wanderX, 0, wanderZ))
+                end
+                task.wait(math.random(1, 3))
+            end
+        end
+    end)
+
+    if role == "jealous" then
+        -- Failed stunts: leap + chaotic spin, then sprawl out, then stand up
+        task.spawn(function()
+            while pen and pen.Parent and hum.Health > 0 do
+                task.wait(math.random(5, 8))
+                if not (pen and pen.Parent and hum.Health > 0) then break end
+                local root = pen:FindFirstChild("HumanoidRootPart")
+                if root then
+                    hum.PlatformStand = true
+                    root.AssemblyLinearVelocity = Vector3.new(
+                        math.random(-10, 10),
+                        math.random(30, 50),
+                        math.random(-10, 10)
+                    )
+                    root.AssemblyAngularVelocity = Vector3.new(
+                        math.random(-20, 20),
+                        math.random(-10, 10),
+                        math.random(-20, 20)
+                    )
+                end
+                task.wait(2.5)
+                if pen and pen.Parent and hum.Health > 0 then
+                    hum.PlatformStand = false
+                end
+            end
+        end)
+    elseif role == "glitchy" then
+        -- Every 10s: restore previously hidden limb, hide a new random one
+        task.spawn(function()
+            local limbs = {
+                {leftArm},
+                {rightArm},
+                {leftLeg, leftFoot},
+                {rightLeg, rightFoot},
+            }
+            local currentHidden = nil
+            while pen and pen.Parent and hum.Health > 0 do
+                task.wait(10)
+                if not (pen and pen.Parent and hum.Health > 0) then break end
+                if currentHidden then
+                    for _,part in pairs(limbs[currentHidden]) do
+                        if part and part.Parent then
+                            part.Transparency = 0
+                            part.CanCollide = true
+                        end
                     end
                 end
-            else
-                local wanderX = math.random(-30, 30)
-                local wanderZ = math.random(-30, 30)
-                hum:MoveTo(pos + Vector3.new(wanderX, 0, wanderZ))
+                local newIdx = math.random(1, #limbs)
+                currentHidden = newIdx
+                for _,part in pairs(limbs[newIdx]) do
+                    if part and part.Parent then
+                        part.Transparency = 1
+                        part.CanCollide = false
+                    end
+                end
             end
-            task.wait(math.random(1, 3))
-        end
-    end)
-    task.spawn(function()
-        while pen and pen.Parent and hum.Health > 0 do
-            task.wait(math.random(3, 7))
-            penguinTalk(pen)
-        end
-    end)
+        end)
+    end
 end
+
+-- Global talk scheduler: one penguin speaks every TALK_INTERVAL seconds
+task.spawn(function()
+    while true do
+        task.wait(TALK_INTERVAL)
+        local alive = {}
+        for _,pen in pairs(penguins) do
+            if pen and pen.Parent then
+                local hum = pen:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    table.insert(alive, pen)
+                end
+            end
+        end
+        if #alive > 0 then
+            local pen = alive[math.random(1, #alive)]
+            local role = pen:GetAttribute("Role") or "normal"
+            penguinTalk(pen, role)
+        end
+    end
+end)
 
 local function penguinEvent()
     announce("PENGUIN EVENT! Penguins are everywhere!")
@@ -448,9 +528,19 @@ local function penguinEvent()
         if ch then
             local root = ch:FindFirstChild("HumanoidRootPart")
             if root then
+                local roles = {}
+                for i = 1, 10 do roles[i] = "normal" end
+                local jealousIdx = math.random(1, 10)
+                local glitchyIdx
+                repeat
+                    glitchyIdx = math.random(1, 10)
+                until glitchyIdx ~= jealousIdx
+                roles[jealousIdx] = "jealous"
+                roles[glitchyIdx] = "glitchy"
+
                 for i = 1, 10 do
                     local offset = Vector3.new(math.random(-20, 20), 5, math.random(-20, 20))
-                    spawnPenguin(root.Position + offset)
+                    spawnPenguin(root.Position + offset, roles[i])
                 end
             end
         end
