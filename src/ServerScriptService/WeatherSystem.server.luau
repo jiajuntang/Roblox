@@ -8,14 +8,17 @@ local origFogColor = Lighting.FogColor
 local origAmbient = Lighting.Ambient
 
 local WEATHER_INTERVAL = 60
-local WEATHER_DURATION = 120
+local WEATHER_DURATION = 240
 local DEFAULT_SPEED = 16
 local DEFAULT_JUMP = 50
 local TALK_INTERVAL = 2
 local FEED_REACH = 10
 local FISH_PER_EVENT = 3
+local JEALOUS_STUNT_INTERVAL = 20
+local STUNT_SILENCE_DURATION = 5
 local penguins = {}
 local playerBonuses = {} -- [userId] = {speed = fractional, jump = fractional}
+local talkSilenceUntil = 0
 
 local fishRewards = {
     {weight = 40, speed = 0.01, jump = 0.02, tier = "Common"},
@@ -529,10 +532,11 @@ local function spawnPenguin(pos, role)
     end)
 
     if role == "jealous" then
-        -- Failed stunts: leap + chaotic spin, then sprawl out, then stand up
+        -- Failed stunts every JEALOUS_STUNT_INTERVAL seconds.
+        -- Each stunt also silences every penguin's chatter for STUNT_SILENCE_DURATION.
         task.spawn(function()
             while pen and pen.Parent and hum.Health > 0 do
-                task.wait(math.random(5, 8))
+                task.wait(JEALOUS_STUNT_INTERVAL)
                 if not (pen and pen.Parent and hum.Health > 0) then break end
                 local root = pen:FindFirstChild("HumanoidRootPart")
                 if root then
@@ -548,6 +552,7 @@ local function spawnPenguin(pos, role)
                         math.random(-20, 20)
                     )
                 end
+                talkSilenceUntil = tick() + STUNT_SILENCE_DURATION
                 task.wait(2.5)
                 if pen and pen.Parent and hum.Health > 0 then
                     hum.PlatformStand = false
@@ -588,23 +593,26 @@ local function spawnPenguin(pos, role)
     end
 end
 
--- Global talk scheduler: one penguin speaks every TALK_INTERVAL seconds
+-- Global talk scheduler: one penguin speaks every TALK_INTERVAL seconds,
+-- paused during jealous-stunt silence windows.
 task.spawn(function()
     while true do
         task.wait(TALK_INTERVAL)
-        local alive = {}
-        for _,pen in pairs(penguins) do
-            if pen and pen.Parent then
-                local hum = pen:FindFirstChildOfClass("Humanoid")
-                if hum and hum.Health > 0 then
-                    table.insert(alive, pen)
+        if tick() >= talkSilenceUntil then
+            local alive = {}
+            for _,pen in pairs(penguins) do
+                if pen and pen.Parent then
+                    local hum = pen:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then
+                        table.insert(alive, pen)
+                    end
                 end
             end
-        end
-        if #alive > 0 then
-            local pen = alive[math.random(1, #alive)]
-            local role = pen:GetAttribute("Role") or "normal"
-            penguinTalk(pen, role)
+            if #alive > 0 then
+                local pen = alive[math.random(1, #alive)]
+                local role = pen:GetAttribute("Role") or "normal"
+                penguinTalk(pen, role)
+            end
         end
     end
 end)
@@ -677,6 +685,47 @@ local function feedPenguin(pen, player)
     end
 end
 
+local function handleFishDropped(tool)
+    local ownerId = tool:GetAttribute("LastHolder")
+    if not ownerId then return end
+    local owner = Players:GetPlayerByUserId(ownerId)
+    if not owner then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+
+    local fishPos = handle.Position
+    local alive = {}
+    for _,pen in pairs(penguins) do
+        if pen and pen.Parent then
+            local hum = pen:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                table.insert(alive, pen)
+            end
+        end
+    end
+    if #alive == 0 then return end
+
+    local eater = alive[math.random(1, #alive)]
+    for _,pen in pairs(alive) do
+        local pRoot = pen:FindFirstChild("HumanoidRootPart")
+        if pRoot then
+            local offset = Vector3.new(
+                math.random(-30, 30) / 10,
+                3,
+                math.random(-30, 30) / 10
+            )
+            pRoot.CFrame = CFrame.new(fishPos + offset)
+        end
+    end
+
+    task.delay(0.4, function()
+        if tool and tool.Parent and eater and eater.Parent then
+            feedPenguin(eater, owner)
+            tool:Destroy()
+        end
+    end)
+end
+
 local function giveFish(player)
     local bp = player:FindFirstChild("Backpack")
     if not bp then return end
@@ -684,8 +733,9 @@ local function giveFish(player)
     local tool = Instance.new("Tool")
     tool.Name = "Fish"
     tool.RequiresHandle = true
-    tool.CanBeDropped = false
-    tool.ToolTip = "Feed to a penguin (within " .. FEED_REACH .. " studs)"
+    tool.CanBeDropped = true
+    tool.ToolTip = "Feed or drop near a penguin"
+    tool:SetAttribute("LastHolder", player.UserId)
 
     local handle = Instance.new("Part")
     handle.Name = "Handle"
@@ -698,6 +748,13 @@ local function giveFish(player)
     fishMesh.MeshType = Enum.MeshType.Sphere
     fishMesh.Scale = Vector3.new(1, 1, 1)
     fishMesh.Parent = handle
+
+    tool.Equipped:Connect(function()
+        local holder = Players:GetPlayerFromCharacter(tool.Parent)
+        if holder then
+            tool:SetAttribute("LastHolder", holder.UserId)
+        end
+    end)
 
     tool.Activated:Connect(function()
         local ch = tool.Parent
@@ -725,6 +782,12 @@ local function giveFish(player)
         if closest then
             feedPenguin(closest, plr)
             tool:Destroy()
+        end
+    end)
+
+    tool:GetPropertyChangedSignal("Parent"):Connect(function()
+        if tool.Parent == workspace then
+            handleFishDropped(tool)
         end
     end)
 
