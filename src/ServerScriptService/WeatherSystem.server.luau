@@ -19,6 +19,7 @@ local STUNT_SILENCE_DURATION = 5
 local penguins = {}
 local playerBonuses = {} -- [userId] = {speed = fractional, jump = fractional}
 local talkSilenceUntil = 0
+local currentStuntPen = nil
 
 local fishRewards = {
     {weight = 40, speed = 0.01, jump = 0.02, tier = "Common"},
@@ -553,6 +554,7 @@ local function spawnPenguin(pos, role)
                     )
                 end
                 talkSilenceUntil = tick() + STUNT_SILENCE_DURATION
+                currentStuntPen = pen
                 task.wait(2.5)
                 if pen and pen.Parent and hum.Health > 0 then
                     hum.PlatformStand = false
@@ -593,12 +595,21 @@ local function spawnPenguin(pos, role)
     end
 end
 
--- Global talk scheduler: one penguin speaks every TALK_INTERVAL seconds,
--- paused during jealous-stunt silence windows.
+-- Global talk scheduler: one penguin speaks every TALK_INTERVAL seconds.
+-- During jealous-stunt silence windows only the stunting penguin may speak.
 task.spawn(function()
     while true do
         task.wait(TALK_INTERVAL)
-        if tick() >= talkSilenceUntil then
+        if tick() < talkSilenceUntil then
+            local pen = currentStuntPen
+            if pen and pen.Parent then
+                local hum = pen:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    local role = pen:GetAttribute("Role") or "normal"
+                    penguinTalk(pen, role)
+                end
+            end
+        else
             local alive = {}
             for _,pen in pairs(penguins) do
                 if pen and pen.Parent then
